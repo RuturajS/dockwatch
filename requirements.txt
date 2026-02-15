@@ -1,0 +1,6 @@
+flask
+docker
+requests
+fpdf
+openpyxl
+flask-login

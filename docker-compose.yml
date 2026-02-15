@@ -1,0 +1,16 @@
+version: "3.8"
+services:
+  dockwatch:
+    build: .
+    env_file: .env
+    ports:
+      - "${PORT:-8080}:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config:/app/config
+    restart: unless-stopped
+    container_name: dockwatch
+    environment:
+      - PYTHONUNBUFFERED=1
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-secretpassword}

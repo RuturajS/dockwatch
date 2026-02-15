@@ -1,0 +1,32 @@
+[diff_block_start]
+<span class="container-name">{{container.Names}}</span>
+<div style="display:flex; justify-content:space-between; width:100%;">
+    <span class="container-id">{{container.Image}}</span>
+    <span class="container-id" style="color:var(--accent);">{{container.Uptime}}</span>
+</div>
+</div>
+</div>
+{% endfor %}
+</div>
+[diff_block_end]
+[diff_block_start]
+// Volume Logic
+function openVolumes() {
+document.getElementById('volume-modal').classList.add('active');
+const list = document.getElementById('volume-list');
+list.innerHTML = 'Loading...';
+
+// If container selected, filter by it. Else show all.
+let url = '/api/volumes';
+if (currentContainerId) {
+url += `?container_id=${currentContainerId}`;
+document.querySelector('#volume-modal h3').innerText = "Volume Usage (Selected)";
+} else {
+document.querySelector('#volume-modal h3').innerText = "Volume Usage (All)";
+}
+
+fetch(url)
+.then(r => r.json())
+.then(data => {
+if (data.error) {
+[diff_block_end]

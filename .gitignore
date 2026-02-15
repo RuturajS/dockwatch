@@ -1,0 +1,24 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables
+.env
+
+# Docker
+.dockerignore
+
+# Database & Config (Keep example config if needed, exclude actual data)
+config/dockwatch.db
+config/docker_monitor_config.json
+# Keep the config folder structure but ignore content inside if specific sensitive files exist
+# config/*
+# !config/.keep
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
