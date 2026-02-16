@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DockWatch</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --sidebar-bg: #0d1117;
+            --text-primary: #c9d1d9;
+            --sidebar-text: #c9d1d9;
+            --border: #30363d;
+            --accent: #58a6ff;
+            --accent-dim: #1f6feb22;
+            --success: #238636;
+            --danger: #da3633;
+            --card-bg: #161b22;
+            --input-bg: #010409;
+            --hover-bg: #161b22;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #ffffff;
+            --sidebar-bg: #f6f8fa;
+            --text-primary: #24292f;
+            --sidebar-text: #24292f;
+            --border: #d0d7de;
+            --accent: #0969da;
+            --accent-dim: #ddf4ff;
+            --success: #1a7f37;
+            --danger: #cf222e;
+            --card-bg: #ffffff;
+            --input-bg: #ffffff;
+            --hover-bg: #eaeef2;
+        }
+
+        [data-theme="slack"] {
+            --bg-color: #1a1d21;
+            --sidebar-bg: #19171d;
+            --text-primary: #d1d2d3;
+            --sidebar-text: #b5bac1;
+            --border: #35373b;
+            --accent: #36C5F0;
+            --accent-dim: #36C5F022;
+            --success: #2E9A5E;
+            --danger: #E01E5A;
+            --card-bg: #222529;
+            --input-bg: #222529;
+            --hover-bg: #2c2f34;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            font-size: 14px;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            color: var(--sidebar-text);
+        }
+
+        [data-theme="slack"] .sidebar {
+            border-right: none;
+        }
+
+        .sidebar-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        [data-theme="slack"] .sidebar-header {
+            border-bottom: 1px solid #5d2c5d;
+        }
+
+        .sidebar-header h2 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--sidebar-text);
+        }
+
+        .search-box {
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        [data-theme="slack"] .search-box {
+            border-bottom: 1px solid #5d2c5d;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            box-sizing: border-box;
+            outline: none;
+            font-size: 0.9rem;
+        }
+
+        [data-theme="slack"] .sidebar input {
+            background: #5d2c5d;
+            border-color: #5d2c5d;
+            color: #ffffff;
+        }
+
+        [data-theme="slack"] .sidebar input::placeholder {
+            color: #cfc3cf;
+            opacity: 0.7;
+        }
+
+        input:focus {
+            border-color: var(--accent);
+        }
+
+        .container-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 5px;
+        }
+
+        .container-item {
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 2px;
+            cursor: pointer;
+            transition: background 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--sidebar-text);
+        }
+
+        .container-item:hover {
+            background: var(--hover-bg);
+        }
+
+        .container-item.active {
+            background: var(--accent-dim);
+            color: var(--accent);
+        }
+
+        [data-theme="slack"] .container-item.active {
+            background: #1164A3;
+            color: #ffffff;
+        }
+
+        [data-theme="slack"] .container-item:hover {
+            background: #350d36;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        .running {
+            background-color: var(--success);
+            box-shadow: 0 0 4px var(--success);
+        }
+
+        .exited {
+            background-color: var(--danger);
+        }
+
+        .container-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 500;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-color);
+            position: relative;
+        }
+
+        .logs-header {
+            padding: 10px 15px;
+            background: var(--bg-color);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 40px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-grow: 1;
+        }
+
+        .content-area {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        .logs-container {
+            flex-grow: 1;
+            padding: 15px;
+            overflow-y: auto;
+            font-family: 'IBM Plex Mono', 'Courier New', monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .stats-panel {
+            width: 300px;
+            border-left: 1px solid var(--border);
+            background: var(--bg-color);
+            padding: 15px;
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px;
+        }
+
+        .stat-title {
+            font-size: 0.8rem;
+            color: #8b949e;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .log-line {
+            border-bottom: 1px solid transparent;
+        }
+
+        .log-line.hidden-by-filter {
+            display: none;
+        }
+
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #8b949e;
+            font-size: 1rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        button.btn-sm,
+        a.btn-sm {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: #8b949e;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        button.btn-sm:hover,
+        a.btn-sm:hover {
+            background: var(--hover-bg);
+            color: var(--text-primary);
+        }
+
+        canvas {
+            max-height: 150px;
+        }
+
+        /* Nav Tabs */
+        .nav-btn {
+            flex: 1;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--sidebar-text);
+            padding: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            border-radius: 4px;
+            opacity: 0.7;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .nav-btn:hover {
+            opacity: 1;
+            background: var(--hover-bg);
+        }
+
+        .nav-btn.active {
+            opacity: 1;
+            background: var(--accent-dim);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .chip {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            color: var(--sidebar-text);
+            opacity: 0.8;
+            margin-right: 4px;
+        }
+
+        .chip:hover {
+            opacity: 1;
+            border-color: var(--accent);
+        }
+
+        .chip.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+            opacity: 1;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            width: 450px;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            color: var(--text-primary);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .close-btn {
+            cursor: pointer;
+            color: #8b949e;
+            font-size: 1.2rem;
+        }
+
+        .setting-group {
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 15px;
+        }
+
+        .setting-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: var(--accent);
+        }
+
+        .theme-options {
+            display: flex;
+            gap: 10px;
+        }
+
+        .theme-btn {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 0.9rem;
+            background: var(--input-bg);
+            color: var(--text-primary);
+        }
+
+        .theme-btn:hover {
+            border-color: var(--accent);
+        }
+
+        .theme-btn.active {
+            background: var(--accent-dim);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 12px 20px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease-out;
+            min-width: 250px;
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--danger);
+        }
+
+        .toast.info {
+            border-left: 4px solid var(--accent);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+            }
+        }
+
+        .nav-btn {
+            flex: 1;
+            text-align: center;
+            padding: 8px 5px;
+            border-radius: 6px;
+            text-decoration: none;
+            color: var(--sidebar-text);
+            font-weight: 500;
+            font-size: 0.85rem;
+            transition: background 0.1s;
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-btn:hover {
+            background: var(--hover-bg);
+            color: var(--text-primary);
+        }
+
+        .nav-btn.active {
+            background: var(--accent-dim);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+    </style>
+    <script src="{{ url_for('static', filename='js/base.js') }}"></script>
+    {% block head_extra %}{% endblock %}
+</head>
+
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                <h2>DockWatch</h2>
+            </div>
+            <div class="nav-tabs" style="display:flex; gap:5px; width:100%;">
+                <a href="/" class="nav-btn {{ 'active' if request.path == '/' else '' }}">Containers</a>
+                <a href="/images_view"
+                    class="nav-btn {{ 'active' if request.path == '/images_view' else '' }}">Images</a>
+                <a href="/system_view"
+                    class="nav-btn {{ 'active' if request.path == '/system_view' else '' }}">System</a>
+                <a href="/alerts_view"
+                    class="nav-btn {{ 'active' if request.path == '/alerts_view' else '' }}">Alerts</a>
+            </div>
+        </div>
+
+        {% block sidebar_list %}{% endblock %}
+    </div>
+
+    <div class="main-content">
+        {% block main %}{% endblock %}
+    </div>
+
+    <!-- Settings Modal Shared -->
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Settings</div>
+                <div class="close-btn" onclick="closeSettings()">✕</div>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Interface Theme</label>
+                <div class="theme-options">
+                    <div class="theme-btn" onclick="setTheme('dark')" id="theme-btn-dark">Dark</div>
+                    <div class="theme-btn" onclick="setTheme('light')" id="theme-btn-light">Light</div>
+                    <div class="theme-btn" onclick="setTheme('slack')" id="theme-btn-slack">Slack</div>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Monitoring Thresholds</label>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;">
+                        <label style="font-size:0.75rem; color:#8b949e;">CPU %</label>
+                        <input type="number" id="conf-cpu" value="80">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:0.75rem; color:#8b949e;">Mem %</label>
+                        <input type="number" id="conf-mem" value="90">
+                    </div>
+                </div>
+            </div>
+
+            <div class="setting-group" style="border:none;">
+                <label class="setting-label">Notifications</label>
+
+                <!-- Slack -->
+                <div style="margin-bottom:12px;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                        <input type="checkbox" id="conf-slack-enabled" style="width:auto;">
+                        <label style="font-size:0.85rem; color:var(--text-primary); margin:0;">Slack</label>
+                    </div>
+                    <input type="text" id="conf-slack" placeholder="Slack Webhook URL">
+                </div>
+
+                <!-- Discord -->
+                <div style="margin-bottom:12px;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                        <input type="checkbox" id="conf-discord-enabled" style="width:auto;">
+                        <label style="font-size:0.85rem; color:var(--text-primary); margin:0;">Discord</label>
+                    </div>
+                    <input type="text" id="conf-discord" placeholder="Discord Webhook URL">
+                </div>
+
+                <!-- Telegram -->
+                <div style="margin-bottom:12px;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                        <input type="checkbox" id="conf-telegram-enabled" style="width:auto;">
+                        <label style="font-size:0.85rem; color:var(--text-primary); margin:0;">Telegram</label>
+                    </div>
+                    <input type="text" id="conf-telegram-token" placeholder="Bot Token" style="margin-bottom:6px;">
+                    <input type="text" id="conf-telegram-chat" placeholder="Chat ID">
+                </div>
+
+                <!-- Generic Webhook -->
+                <div style="margin-bottom:12px;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                        <input type="checkbox" id="conf-generic-enabled" style="width:auto;">
+                        <label style="font-size:0.85rem; color:var(--text-primary); margin:0;">Generic Webhook</label>
+                    </div>
+                    <input type="text" id="conf-generic" placeholder="Generic Webhook URL">
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                <button class="btn-sm" style="color:var(--accent); border-color:var(--accent);"
+                    onclick="saveAlertSettings()">Save & Close</button>
+            </div>
+        </div>
+    </div>
+    <div id="toast-container"></div>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

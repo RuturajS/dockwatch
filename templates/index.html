@@ -1,32 +1,115 @@
-[diff_block_start]
-<span class="container-name">{{container.Names}}</span>
-<div style="display:flex; justify-content:space-between; width:100%;">
-    <span class="container-id">{{container.Image}}</span>
-    <span class="container-id" style="color:var(--accent);">{{container.Uptime}}</span>
-</div>
-</div>
-</div>
-{% endfor %}
-</div>
-[diff_block_end]
-[diff_block_start]
-// Volume Logic
-function openVolumes() {
-document.getElementById('volume-modal').classList.add('active');
-const list = document.getElementById('volume-list');
-list.innerHTML = 'Loading...';
+{% extends "base.html" %}
 
-// If container selected, filter by it. Else show all.
-let url = '/api/volumes';
-if (currentContainerId) {
-url += `?container_id=${currentContainerId}`;
-document.querySelector('#volume-modal h3').innerText = "Volume Usage (Selected)";
-} else {
-document.querySelector('#volume-modal h3').innerText = "Volume Usage (All)";
-}
+{% block sidebar_list %}
+<div class="search-box">
+    <input type="text" id="container-search" placeholder="Search containers..." onkeyup="filterContainers()">
+    <div style="margin-top:8px; display:flex;">
+        <span class="chip active" id="filter-all" onclick="filterStatus('all')">All</span>
+        <span class="chip" id="filter-running" onclick="filterStatus('running')">Running</span>
+        <span class="chip" id="filter-exited" onclick="filterStatus('exited')">Stopped</span>
+    </div>
+</div>
+<div class="container-list" id="container-list-box">
+    {% for c in containers %}
+    <div class="container-item" onclick="selectContainer(this)" id="item-{{c.ID}}" data-id="{{c.ID}}"
+        data-name="{{c.Names}}" data-image="{{c.Image}}" data-uptime="{{c.Uptime}}" data-ports="{{c.Ports}}"
+        data-status="{{c.StatusText}}" data-state="{{c.State}}">
+        <div style="width:100%">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center;">
+                    <span class="status-dot {{ 'running' if c.State == 'running' else 'exited' }}"></span>
+                    <span class="container-name">{{ c.Names }}</span>
+                </div>
+                <span style="font-size:0.75rem; color:var(--sidebar-text); opacity:0.7; font-family:monospace;">{{
+                    c.Ports }}</span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
 
-fetch(url)
-.then(r => r.json())
-.then(data => {
-if (data.error) {
-[diff_block_end]
+{% block main %}
+<div class="logs-header" id="log-header" style="height:auto; flex-wrap:wrap; gap:10px;">
+    <div class="header-left" style="flex-direction:column; align-items:flex-start; gap:2px; min-width:300px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <strong id="selected-name" style="font-size:1.1rem; visibility:hidden;">Placeholder</strong>
+            <span id="selected-id" style="color:#8b949e; font-family:monospace; font-size:0.8rem;"></span>
+            <span id="selected-status"
+                style="font-size:0.8rem; padding: 2px 6px; border-radius:4px; border:1px solid var(--border); display:none;"></span>
+        </div>
+        <div style="font-size:0.8rem; color:#8b949e; display:flex; gap:15px; margin-top:4px; visibility:hidden;"
+            id="details-row">
+            <span title="Image">📦 <span id="selected-image"></span></span>
+            <span title="Uptime">⏱️ <span id="selected-uptime"></span></span>
+        </div>
+    </div>
+
+    <div style="display:flex; gap:15px; align-items:center; margin-left:auto;">
+        <!-- Search -->
+        <input type="text" id="log-search" placeholder="Filter logs..."
+            style="width: 150px; padding: 4px 8px; font-size: 0.8rem; height: 28px;" onkeyup="filterLogs()">
+
+        <!-- Exports -->
+        <div style="display:flex; gap:5px;">
+            <button class="btn-sm" onclick="exportLogs('txt')" title="Export TXT">TXT</button>
+            <button class="btn-sm" onclick="exportLogs('json')" title="Export JSON">JSON</button>
+            <button class="btn-sm" onclick="exportLogs('pdf')" title="Export PDF">PDF</button>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button class="btn-sm" onclick="toggleStats()" id="stats-btn">Stats: ON</button>
+            <button class="btn-sm" onclick="toggleAutoScroll()" id="scroll-btn">Scroll: ON</button>
+            <button class="btn-sm" onclick="clearLogs()">Clear</button>
+            <button class="btn-sm" onclick="openSettings()">⚙️ Settings</button>
+            <a href="/logout" class="btn-sm"
+                style="text-decoration:none; color:var(--danger); border-color:var(--danger);">Logout</a>
+        </div>
+    </div>
+</div>
+
+<div class="content-area">
+    <div id="logs-view" class="logs-container">
+        <div class="empty-state">Select a container to start streaming logs</div>
+    </div>
+
+    <div class="stats-panel" id="stats-panel" style="position:relative;">
+        <div id="stats-overlay"
+            style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:var(--bg-color); z-index:10; align-items:center; justify-content:center; color:#8b949e; flex-direction:column; text-align:center; opacity:0.9;">
+            <div style="font-size:2rem; margin-bottom:10px;">🛑</div>
+            <div>Container Not Running</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">CPU Usage</div>
+            <div class="stat-value" id="cpu-text">0%</div>
+            <canvas id="cpuChart"></canvas>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">Memory Usage</div>
+            <div class="stat-value" id="mem-text">0 MB</div>
+            <canvas id="memChart"></canvas>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">Network I/O (Total)</div>
+            <div class="stat-value" id="net-text">0 MB</div>
+            <canvas id="netChart"></canvas>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">Disk I/O (Total)</div>
+            <div class="stat-value" id="disk-text">0 MB</div>
+            <canvas id="diskChart"></canvas>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">Volume Usage (Appx)</div>
+            <div class="stat-value" id="vol-text">...</div>
+            <div id="vol-details"
+                style="font-size:0.75rem; color:#8b949e; margin-top:5px; max-height:100px; overflow-y:auto;"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/index.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block sidebar_list %}
+<div class="search-box">
+    <input type="text" id="image-search" placeholder="Search images..." onkeyup="filterImages()">
+    <div style="margin-top:10px; display:flex; gap:5px;">
+        <input type="text" id="pull-image-name" placeholder="image:tag"
+            style="width:100%; border:1px solid var(--border); background:var(--input-bg); color:var(--text-primary); padding:4px; border-radius:4px;">
+        <button class="btn-sm" onclick="pullImage()">Pull</button>
+    </div>
+    <div id="pull-progress" style="font-size:0.7rem; color:var(--accent); margin-top:5px;"></div>
+</div>
+<div class="container-list" id="image-list-box">
+    <div style="padding:10px; color:#8b949e;">Loading images...</div>
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="logs-header" style="position:sticky; top:0; z-index:100; background:var(--bg-color);">
+    <div class="header-left">
+        <strong id="selected-image-tag">Select an image</strong>
+        <span id="selected-image-id" style="color:#8b949e; font-family:monospace;"></span>
+    </div>
+    <div class="controls">
+        <button class="btn-sm" onclick="scanImage()">🛡️ Scan</button>
+        <button class="btn-sm" onclick="deleteImage()"
+            style="color:var(--danger); border-color:var(--danger);">Delete</button>
+    </div>
+</div>
+<div class="content-area" style="flex-direction:column; overflow-y:auto; padding:20px;">
+    <div id="image-details-view">
+        <h3>History</h3>
+        <pre id="history-view"
+            style="background:var(--card-bg); padding:10px; border-radius:6px; overflow-x:auto; overflow-y:auto; max-height:300px; font-size:0.8rem;"></pre>
+
+        <h3>Scan Results</h3>
+        <pre id="scan-view"
+            style="background:var(--card-bg); padding:10px; border-radius:6px; overflow-x:auto; overflow-y:auto; max-height:400px; font-size:0.8rem;">No scan run.</pre>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/images.js') }}"></script>
+{% endblock %}

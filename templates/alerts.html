@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block sidebar_list %}
+<div style="padding:15px; font-size:0.9rem; color:var(--sidebar-text);">
+    Alert History (Last 100)
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="logs-header" style="position:sticky; top:0; z-index:100; background:var(--bg-color);">
+    <strong style="font-size:1.1rem;">Alert History</strong>
+    <div class="controls" style="display:flex; gap:10px; align-items:center;">
+        <label style="font-size:0.85rem; color:#8b949e;">Filter Date:</label>
+        <input type="date" id="alert-date-filter" onchange="filterAlerts()"
+            style="padding:4px; border:1px solid var(--border); border-radius:4px; background:var(--input-bg); color:var(--text-primary);">
+        <button class="btn-sm" onclick="location.reload()">Refresh</button>
+    </div>
+</div>
+
+<div class="content-area" style="flex-direction:column; padding:20px; overflow-y:auto;">
+    <table style="width:100%; border-collapse:collapse; color:var(--text-primary); font-size:0.9rem;">
+        <thead>
+            <tr style="border-bottom:1px solid var(--border); text-align:left;">
+                <th style="padding:10px;">Time</th>
+                <th style="padding:10px;">Level</th>
+                <th style="padding:10px;">Container</th>
+                <th style="padding:10px;">Message</th>
+            </tr>
+        </thead>
+        <tbody id="alert-table-body">
+            <tr>
+                <td colspan="4" style="padding:10px; text-align:center; color:#8b949e;">Loading...</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/alerts.js') }}"></script>
+{% endblock %}

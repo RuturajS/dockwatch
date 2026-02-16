@@ -6,14 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - DockWatch</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    <!-- Inline B&W Style -->
     <style>
         :root {
             --bg-color: #ffffff;
             --card-bg: #ffffff;
-            --text-primary: #000000;
-            --border: #000000;
-            --danger: #ff0000;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --danger: #dc2626;
         }
 
         body {
@@ -22,6 +24,7 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
@@ -30,83 +33,175 @@
         .login-card {
             background: var(--card-bg);
             padding: 40px;
-            border-radius: 4px;
-            border: 2px solid var(--border);
-            width: 320px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            width: 350px;
             text-align: center;
-            box-shadow: 4px 4px 0px var(--border);
-            /* B&W Shadow Effect */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
         }
 
         .login-title {
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             font-weight: bold;
-            color: var(--text-primary);
+            color: #111827;
+            margin-bottom: 5px;
+            letter-spacing: -0.5px;
+        }
+
+        .login-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
             margin-bottom: 30px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
         }
 
         .input-group {
             margin-bottom: 20px;
             text-align: left;
+            position: relative;
         }
 
         .input-group label {
             display: block;
             margin-bottom: 8px;
-            font-size: 0.9rem;
-            color: var(--text-primary);
+            font-size: 0.85rem;
+            color: #374151;
             font-weight: 600;
-            text-transform: uppercase;
         }
 
         .input-group input {
             width: 100%;
             padding: 12px;
-            border-radius: 4px;
-            border: 2px solid var(--border);
-            background: var(--bg-color);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: #f9fafb;
             color: var(--text-primary);
             box-sizing: border-box;
             font-size: 1rem;
             outline: none;
-            font-family: monospace;
+            transition: all 0.2s;
         }
 
         .input-group input:focus {
-            background: #f0f0f0;
+            border-color: var(--accent);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
         .btn {
             width: 100%;
             padding: 12px;
-            border: 2px solid var(--border);
-            border-radius: 4px;
-            background: var(--text-primary);
-            color: var(--bg-color);
-            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            background: var(--accent);
+            color: #fff;
+            font-weight: 600;
             font-size: 1rem;
             cursor: pointer;
             transition: all 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
         }
 
         .btn:hover {
-            background: #333;
-            color: #fff;
-            transform: translateY(1px);
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .captcha-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            justify-content: space-between;
+        }
+
+        .captcha-img {
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+        }
+
+        .step-container {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .step-container.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .alert {
-            border: 2px solid var(--danger);
+            background: #fef2f2;
+            border: 1px solid #fee2e2;
             color: var(--danger);
-            padding: 10px;
+            padding: 12px;
+            border-radius: 6px;
             margin-bottom: 20px;
             font-size: 0.9rem;
-            font-weight: bold;
-            text-transform: uppercase;
+            display: none;
+            font-weight: 500;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Footer & About Section */
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        .footer a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+            margin: 0 5px;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .about-me {
+            margin-top: 20px;
+            max-width: 400px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #9ca3af;
         }
     </style>
 </head>
@@ -114,27 +209,147 @@
 <body>
     <div class="login-card">
         <div class="login-title">DockWatch</div>
+        <div class="login-subtitle">Secure Access Portal</div>
+
+        <div id="alert-box" class="alert"></div>
 
         {% with messages = get_flashed_messages() %}
         {% if messages %}
         {% for message in messages %}
-        <div class="alert">{{ message }}</div>
+        <div style="display:block" class="alert">{{ message }}</div>
         {% endfor %}
         {% endif %}
         {% endwith %}
 
-        <form action="/login" method="POST">
-            <div class="input-group">
-                <label>Username</label>
-                <input type="text" name="username" required autocomplete="username">
+        <form action="/login" method="POST" id="loginForm">
+            <!-- Step 1: Username -->
+            <div id="step-1" class="step-container active">
+                <div class="input-group">
+                    <label>Username</label>
+                    <input type="text" id="username" name="username" required autocomplete="username"
+                        placeholder="Enter username">
+                </div>
+                <button type="button" class="btn" onclick="validateUser()">
+                    <span id="next-text">Next</span>
+                    <span id="next-spinner" class="spinner"></span>
+                </button>
             </div>
-            <div class="input-group">
-                <label>Password</label>
-                <input type="password" name="password" required autocomplete="current-password">
+
+            <!-- Step 2: Password, Captcha -->
+            <div id="step-2" class="step-container">
+                <div class="input-group">
+                    <label>Password (32 chars)</label>
+                    <input type="password" id="password" name="password" required autocomplete="current-password"
+                        minlength="32" maxlength="32" placeholder="••••••••••••••••••••••••••••••••">
+                    <small style="color:var(--text-secondary); font-size:0.7em; margin-top:4px; display:block">Must be
+                        exactly 32 characters</small>
+                </div>
+
+                <div class="input-group">
+                    <label>Security Check</label>
+                    <div class="captcha-container">
+                        <img src="/captcha" alt="Captcha" class="captcha-img" id="captcha-img"
+                            onclick="refreshCaptcha()" title="Click to refresh">
+                        <input type="text" name="captcha" required placeholder="Code"
+                            style="width: 80px; text-transform: uppercase;">
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px;">
+                    <button type="button" class="btn" style="background:#e5e7eb; color:#374151; width:30%"
+                        onclick="goBack()">Back</button>
+                    <button type="submit" class="btn">Login</button>
+                </div>
             </div>
-            <button type="submit" class="btn">LOGIN</button>
         </form>
     </div>
+
+    <!-- Footer / About Section -->
+    <div class="footer">
+        <div>&copy; 2026 Ruturaj Sharbidre. All Rights Reserved.</div>
+        <div style="margin-top: 5px;">
+            <a href="https://linkedin.com/in/ruturajsharbidre" target="_blank">LinkedIn</a> •
+            <a href="https://github.com/RuturajS" target="_blank">GitHub</a>
+        </div>
+    </div>
+
+    <div class="about-me">
+        <p>Built with ❤️ by Ruturaj using Python Flask & Docker SDK.</p>
+    </div>
+
+    <script>
+        function validateUser() {
+            const username = document.getElementById('username').value;
+            if (!username) {
+                showAlert("Please enter a username");
+                return;
+            }
+
+            const btnText = document.getElementById('next-text');
+            const spinner = document.getElementById('next-spinner');
+
+            btnText.style.display = 'none';
+            spinner.style.display = 'inline-block';
+
+            fetch('/api/check_user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: username })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    btnText.style.display = 'inline';
+                    spinner.style.display = 'none';
+
+                    if (data.exists) {
+                        goToStep2();
+                    } else {
+                        showAlert("Username not found");
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    btnText.style.display = 'inline';
+                    spinner.style.display = 'none';
+                    showAlert("Connection error");
+                });
+        }
+
+        function goToStep2() {
+            document.getElementById('step-1').classList.remove('active');
+            document.getElementById('step-2').classList.add('active');
+            document.getElementById('password').focus();
+            hideAlert();
+        }
+
+        function goBack() {
+            document.getElementById('step-2').classList.remove('active');
+            document.getElementById('step-1').classList.add('active');
+            hideAlert();
+        }
+
+        function refreshCaptcha() {
+            document.getElementById('captcha-img').src = '/captcha?' + new Date().getTime();
+        }
+
+        function showAlert(msg) {
+            const el = document.getElementById('alert-box');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        function hideAlert() {
+            document.getElementById('alert-box').style.display = 'none';
+        }
+
+        // Enter key support for step 1
+        document.getElementById('username').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                validateUser();
+            }
+        });
+    </script>
 </body>
 
 </html>

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block sidebar_list %}
+<div style="padding:15px; font-size:0.9rem; color:var(--sidebar-text);">
+    System Overview
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="logs-header">
+    <strong style="font-size:1.1rem;">System Information</strong>
+    <div class="controls">
+        <button class="btn-sm" onclick="pruneSystem()" style="color:var(--danger); border-color:var(--danger);">Prune
+            All (Unused)</button>
+    </div>
+</div>
+<div class="content-area" style="flex-direction:column; padding:20px; overflow-y:auto;">
+
+    <!-- Docker Version -->
+    <div class="stat-card" style="margin-bottom:20px; position:relative;">
+        <div
+            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; position:sticky; top:0; background:var(--card-bg); z-index:10; padding-bottom:10px;">
+            <div class="stat-title">Docker Version</div>
+            <button class="btn-sm" onclick="toggleFormat('version')">Switch View</button>
+        </div>
+        <div id="version-table-container"></div>
+        <pre id="version-json" class="hidden"
+            style="font-family:monospace; font-size:0.85rem; color:var(--text-primary); background:var(--input-bg); padding:10px; border-radius:6px; overflow-x:auto; max-height:400px; overflow-y:auto;">Loading...</pre>
+    </div>
+
+    <!-- Disk Usage -->
+    <div class="stat-card" style="margin-bottom:20px; position:relative;">
+        <div
+            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; position:sticky; top:0; background:var(--card-bg); z-index:10; padding-bottom:10px;">
+            <div class="stat-title">Disk Usage</div>
+            <button class="btn-sm" onclick="toggleFormat('df')">Switch View</button>
+        </div>
+        <div id="df-table-container"></div>
+        <pre id="df-json" class="hidden"
+            style="font-family:monospace; font-size:0.85rem; color:var(--text-primary); background:var(--input-bg); padding:10px; border-radius:6px; overflow-x:auto; max-height:400px; overflow-y:auto;">Loading...</pre>
+    </div>
+
+    <!-- System Activity -->
+    <div class="stat-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div class="stat-title">System Activity</div>
+            <div style="display:flex; align-items:center; gap:5px;">
+                <label style="font-size:0.8rem; color:#8b949e;">Filter Date:</label>
+                <input type="date" id="event-date-filter" onchange="filterEvents()"
+                    style="padding:4px; border:1px solid var(--border); border-radius:4px; background:var(--input-bg); color:var(--text-primary);">
+            </div>
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border); text-align:left;">
+                    <th style="padding:8px;">Time</th>
+                    <th style="padding:8px;">Event</th>
+                    <th style="padding:8px;">Details</th>
+                </tr>
+            </thead>
+            <tbody id="events-body">
+                <tr>
+                    <td colspan="3" style="padding:10px; text-align:center;">Loading...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/system.js') }}"></script>
+<style>
+    .hidden {
+        display: none !important;
+    }
+</style>
+{% endblock %}
