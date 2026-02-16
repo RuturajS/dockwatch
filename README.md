@@ -133,9 +133,6 @@ dockwatch/
 └── config/              # Configuration and database files
 ```
 
-## Migration
-
-If you're upgrading from a previous version, see [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) for detailed instructions.
 
 ## License
 
