@@ -53,7 +53,71 @@ A modern web-based Docker monitoring tool built with Python Flask. Monitor your 
 5. **Login**:
    Use the credentials you set in the `.env` file
 
-### Option 2: Running Locally (Without Docker)
+### Option 2: Pull from Docker Hub (Quick Start)
+
+Run DockWatch directly from Docker Hub without cloning the repository:
+
+#### **Basic Run (with default settings)**:
+```bash
+docker run -d \
+  --name dockwatch \
+  -p 8080:8080 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  yourusername/dockwatch:latest
+```
+
+#### **Run with Environment Variables**:
+```bash
+docker run -d \
+  --name dockwatch \
+  -p 8080:8080 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -e ADMIN_USERNAME=admin \
+  -e ADMIN_PASSWORD=YourSecurePassword12345678901234 \
+  -e PORT=8080 \
+  -e DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your-webhook-url \
+  -e SLACK_WEBHOOK_URL=https://hooks.slack.com/services/your-webhook \
+  -e TELEGRAM_BOT_TOKEN=your-bot-token \
+  -e TELEGRAM_CHAT_ID=your-chat-id \
+  yourusername/dockwatch:latest
+```
+
+#### **Run with .env file**:
+```bash
+# Create a .env file with your settings
+docker run -d \
+  --name dockwatch \
+  -p 8080:8080 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  --env-file .env \
+  yourusername/dockwatch:latest
+```
+
+#### **Environment Variables Reference**:
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `ADMIN_USERNAME` | No | `admin` | Admin login username |
+| `ADMIN_PASSWORD` | **Yes** | - | Admin password (must be exactly 32 characters) |
+| `PORT` | No | `8080` | Application port |
+| `DISCORD_WEBHOOK_URL` | No | - | Discord webhook for notifications |
+| `SLACK_WEBHOOK_URL` | No | - | Slack webhook for notifications |
+| `TELEGRAM_BOT_TOKEN` | No | - | Telegram bot token |
+| `TELEGRAM_CHAT_ID` | No | - | Telegram chat ID |
+| `GENERIC_WEBHOOK_URL` | No | - | Generic webhook URL |
+
+**Important Notes**:
+- The `ADMIN_PASSWORD` **must be exactly 32 characters long**
+- The Docker socket mount (`-v /var/run/docker.sock:/var/run/docker.sock`) is required for monitoring
+- On Windows, use `//var/run/docker.sock:/var/run/docker.sock` for the socket path
+- Webhook URLs configured in `.env` will be loaded automatically on first run
+
+#### **Access the Application**:
+- Open your browser to `http://localhost:8080`
+- Login with your configured credentials
+- Configure additional settings via the ⚙️ Settings button
+
+### Option 3: Running Locally (Without Docker)
 
 1. **Clone the repository**:
    ```bash
