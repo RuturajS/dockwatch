@@ -48,8 +48,6 @@ function selectImage(img, el) {
         .then(data => {
             document.getElementById('history-view').textContent = JSON.stringify(data, null, 2);
         });
-
-    document.getElementById('scan-view').textContent = "No scan run.";
 }
 
 function pullImage() {
@@ -93,28 +91,4 @@ function pullImage() {
     });
 }
 
-function scanImage() {
-    if (!currentImage) return;
-    document.getElementById('scan-view').textContent = "Scanning... (this may take a while)";
-    fetch(`/api/images/scan/${currentImage.long_id}`)
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById('scan-view').textContent = JSON.stringify(data, null, 2);
-            showToast('Scan Complete', 'success');
-        })
-        .catch(e => showToast('Scan Failed: ' + e, 'error'));
-}
 
-function deleteImage() {
-    if (!currentImage) return;
-    if (!confirm('Delete image ' + currentImage.tags[0] + '?')) return;
-    fetch(`/api/images/${currentImage.long_id}?force=true`, { method: 'DELETE' })
-        .then(r => r.json())
-        .then(d => {
-            if (d.error) showToast(d.error, 'error');
-            else {
-                showToast("Image Deleted", 'success');
-                setTimeout(() => location.reload(), 1000);
-            }
-        });
-}

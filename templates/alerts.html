@@ -2,34 +2,53 @@
 
 {% block sidebar_list %}
 <div style="padding:15px; font-size:0.9rem; color:var(--sidebar-text);">
-    Alert History (Last 100)
+    <h3 style="font-size:0.95rem; margin-bottom:10px;">Alert History</h3>
+    <p style="font-size:0.75rem; color:#8b949e; margin-bottom:15px;">Last 100 alerts from monitoring</p>
+
+    <div style="margin-bottom:15px;">
+        <label style="font-size:0.85rem; color:#8b949e; display:block; margin-bottom:5px;">Filter by Date</label>
+        <input type="date" id="alert-date-filter" onchange="filterAlerts()"
+            style="width:100%; padding:6px; border:1px solid var(--border); border-radius:4px; background:var(--input-bg); color:var(--text-primary);">
+    </div>
+
+    <button class="btn-sm" onclick="testNotification()"
+        style="width:100%; margin-bottom:8px; background:var(--accent); border-color:var(--accent); color:#fff;">
+        🧪 Send Test Alert
+    </button>
+
+    <button class="btn-sm" onclick="location.reload()" style="width:100%;">
+        🔄 Refresh History
+    </button>
+
+    <div
+        style="margin-top:15px; padding:10px; background:var(--card-bg); border-radius:6px; font-size:0.75rem; color:#8b949e;">
+        💡 <strong>Tip:</strong> Configure alert thresholds and webhooks in the Settings (⚙️) button on the Containers
+        page.
+    </div>
 </div>
 {% endblock %}
 
 {% block main %}
 <div class="logs-header" style="position:sticky; top:0; z-index:100; background:var(--bg-color);">
-    <strong style="font-size:1.1rem;">Alert History</strong>
-    <div class="controls" style="display:flex; gap:10px; align-items:center;">
-        <label style="font-size:0.85rem; color:#8b949e;">Filter Date:</label>
-        <input type="date" id="alert-date-filter" onchange="filterAlerts()"
-            style="padding:4px; border:1px solid var(--border); border-radius:4px; background:var(--input-bg); color:var(--text-primary);">
-        <button class="btn-sm" onclick="location.reload()">Refresh</button>
+    <strong style="font-size:1.1rem;">📜 Alert History</strong>
+    <div style="color:#8b949e; font-size:0.85rem;">
+        Showing recent monitoring alerts and notifications
     </div>
 </div>
 
 <div class="content-area" style="flex-direction:column; padding:20px; overflow-y:auto;">
     <table style="width:100%; border-collapse:collapse; color:var(--text-primary); font-size:0.9rem;">
-        <thead>
-            <tr style="border-bottom:1px solid var(--border); text-align:left;">
-                <th style="padding:10px;">Time</th>
-                <th style="padding:10px;">Level</th>
-                <th style="padding:10px;">Container</th>
-                <th style="padding:10px;">Message</th>
+        <thead style="position:sticky; top:0; background:var(--bg-color); z-index:10;">
+            <tr style="border-bottom:2px solid var(--border); text-align:left;">
+                <th style="padding:12px; font-weight:600;">Time</th>
+                <th style="padding:12px; font-weight:600;">Level</th>
+                <th style="padding:12px; font-weight:600;">Container</th>
+                <th style="padding:12px; font-weight:600;">Message</th>
             </tr>
         </thead>
         <tbody id="alert-table-body">
             <tr>
-                <td colspan="4" style="padding:10px; text-align:center; color:#8b949e;">Loading...</td>
+                <td colspan="4" style="padding:20px; text-align:center; color:#8b949e;">Loading alerts...</td>
             </tr>
         </tbody>
     </table>

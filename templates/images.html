@@ -21,21 +21,12 @@
         <strong id="selected-image-tag">Select an image</strong>
         <span id="selected-image-id" style="color:#8b949e; font-family:monospace;"></span>
     </div>
-    <div class="controls">
-        <button class="btn-sm" onclick="scanImage()">🛡️ Scan</button>
-        <button class="btn-sm" onclick="deleteImage()"
-            style="color:var(--danger); border-color:var(--danger);">Delete</button>
-    </div>
 </div>
 <div class="content-area" style="flex-direction:column; overflow-y:auto; padding:20px;">
     <div id="image-details-view">
-        <h3>History</h3>
+        <h3>Image History</h3>
         <pre id="history-view"
-            style="background:var(--card-bg); padding:10px; border-radius:6px; overflow-x:auto; overflow-y:auto; max-height:300px; font-size:0.8rem;"></pre>
-
-        <h3>Scan Results</h3>
-        <pre id="scan-view"
-            style="background:var(--card-bg); padding:10px; border-radius:6px; overflow-x:auto; overflow-y:auto; max-height:400px; font-size:0.8rem;">No scan run.</pre>
+            style="background:var(--card-bg); padding:10px; border-radius:6px; overflow-x:auto; overflow-y:auto; max-height:500px; font-size:0.8rem;"></pre>
     </div>
 </div>
 {% endblock %}

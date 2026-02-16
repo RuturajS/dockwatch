@@ -79,6 +79,60 @@ def init_db():
             except sqlite3.OperationalError as e:
                 print(f"Column {col_name} migration error: {e}")
 
+    # Load webhook values from environment variables if they exist
+    # This ensures .env values are populated on first run
+    slack_webhook = os.environ.get('SLACK_WEBHOOK_URL', '')
+    discord_webhook = os.environ.get('DISCORD_WEBHOOK_URL', '')
+    telegram_token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+    telegram_chat = os.environ.get('TELEGRAM_CHAT_ID', '')
+    generic_webhook = os.environ.get('GENERIC_WEBHOOK_URL', '')
+    
+    # Check if config already has values, if not, populate from env
+    c.execute("SELECT slack_webhook, discord_webhook, telegram_bot_token, telegram_chat_id, generic_webhook FROM alerts_config WHERE id=1")
+    current_config = c.fetchone()
+    
+    if current_config:
+        # Update only if database values are empty but env has values
+        db_slack, db_discord, db_tg_token, db_tg_chat, db_generic = current_config
+        
+        updates = []
+        params = []
+        
+        if not db_slack and slack_webhook:
+            updates.append("slack_webhook=?")
+            params.append(slack_webhook)
+            updates.append("slack_enabled=?")
+            params.append(1 if slack_webhook else 0)
+            
+        if not db_discord and discord_webhook:
+            updates.append("discord_webhook=?")
+            params.append(discord_webhook)
+            updates.append("discord_enabled=?")
+            params.append(1 if discord_webhook else 0)
+            
+        if not db_tg_token and telegram_token:
+            updates.append("telegram_bot_token=?")
+            params.append(telegram_token)
+            
+        if not db_tg_chat and telegram_chat:
+            updates.append("telegram_chat_id=?")
+            params.append(telegram_chat)
+            
+        if telegram_token and telegram_chat and (not db_tg_token or not db_tg_chat):
+            updates.append("telegram_enabled=?")
+            params.append(1)
+            
+        if not db_generic and generic_webhook:
+            updates.append("generic_webhook=?")
+            params.append(generic_webhook)
+            updates.append("generic_enabled=?")
+            params.append(1 if generic_webhook else 0)
+        
+        if updates:
+            query = f"UPDATE alerts_config SET {', '.join(updates)} WHERE id=1"
+            c.execute(query, params)
+            print("Loaded webhook configurations from environment variables")
+
     # Alert History
     c.execute('''CREATE TABLE IF NOT EXISTS alert_history
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -575,24 +629,50 @@ def image_history(image_id):
 @login_required
 def scan_image(image_id):
     try:
+        # First check if Trivy is installed
+        try:
+            trivy_check = subprocess.run(["trivy", "--version"], capture_output=True, text=True, timeout=5)
+            if trivy_check.returncode != 0:
+                return jsonify({
+                    'error': 'Trivy is not installed or not accessible',
+                    'message': 'Please install Trivy to use vulnerability scanning: https://aquasecurity.github.io/trivy/'
+                }), 400
+        except FileNotFoundError:
+            return jsonify({
+                'error': 'Trivy is not installed',
+                'message': 'Please install Trivy to use vulnerability scanning: https://aquasecurity.github.io/trivy/',
+                'install_command': 'See https://aquasecurity.github.io/trivy/latest/getting-started/installation/'
+            }), 400
+        except subprocess.TimeoutExpired:
+            return jsonify({'error': 'Trivy check timed out'}), 500
+        
         image = client.images.get(image_id)
         # Use repo tag if available, else ID
         target = image.tags[0] if image.tags else image.id
         
-        # Trivy command
+        # Trivy command with timeout
         cmd = ["trivy", "image", "--format", "json", "--scanners", "vuln", target]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)  # 5 min timeout
         
         if result.returncode != 0:
              # Trivy might fail if DB not found or other issues
-             # We try to return stderr
              err = result.stderr or "Unknown error"
-             return jsonify({'error': err, 'stdout': result.stdout})
+             return jsonify({
+                 'error': 'Trivy scan failed',
+                 'details': err,
+                 'stdout': result.stdout
+             }), 500
              
         # Return raw JSON from trivy
         return Response(result.stdout, mimetype='application/json')
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'Scan timed out. Image might be too large or Trivy is taking too long.'}), 500
+    except docker.errors.ImageNotFound:
+        return jsonify({'error': f'Image {image_id} not found'}), 404
+    except docker.errors.APIError as e:
+        return jsonify({'error': f'Docker API error: {str(e)}'}), 500
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
 @app.route('/api/images/pull', methods=['POST'])
 @login_required
@@ -617,10 +697,41 @@ def pull_image():
 def delete_image(image_id):
     try:
         force = request.args.get('force', 'false') == 'true'
+        
+        # Try to get image info first
+        try:
+            image = client.images.get(image_id)
+            image_tags = image.tags if image.tags else ['<none>:<none>']
+        except docker.errors.ImageNotFound:
+            return jsonify({'error': f'Image {image_id} not found'}), 404
+        
+        # Attempt deletion
         client.images.remove(image_id, force=force)
-        return jsonify({'status': 'deleted'})
+        return jsonify({
+            'status': 'deleted',
+            'image': image_tags[0]
+        })
+    except docker.errors.APIError as e:
+        error_msg = str(e)
+        # Check for common error patterns
+        if 'is being used by' in error_msg or 'conflict' in error_msg.lower():
+            return jsonify({
+                'error': 'Image is currently in use by one or more containers',
+                'details': 'Please stop and remove containers using this image first, or use force delete',
+                'technical_details': error_msg
+            }), 409
+        elif 'no such image' in error_msg.lower():
+            return jsonify({'error': f'Image {image_id} not found'}), 404
+        else:
+            return jsonify({
+                'error': 'Failed to delete image',
+                'details': error_msg
+            }), 500
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'error': 'Unexpected error while deleting image',
+            'details': str(e)
+        }), 500
 
 @app.route('/api/images/prune', methods=['POST'])
 @login_required
@@ -767,6 +878,20 @@ def alerts_history_api():
     for r in rows:
         history.append({'id': r[0], 'timestamp': r[1], 'level': r[2], 'message': r[3], 'container': r[4]})
     return jsonify(history)
+
+@app.route('/api/alerts/test', methods=['POST'])
+@login_required
+def test_notification():
+    """Send a test notification to verify webhook configuration"""
+    try:
+        send_notification(
+            "🧪 DockWatch Test Notification",
+            "This is a test message from DockWatch. If you're seeing this, your notification configuration is working correctly!"
+        )
+        log_alert("Info", "Test notification sent", "System")
+        return jsonify({'status': 'success', 'message': 'Test notification sent successfully'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # --- Monitoring Logic ---
 last_alert_cooldown = {}
