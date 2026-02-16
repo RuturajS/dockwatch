@@ -1,39 +1,157 @@
 {% extends "base.html" %}
 
 {% block sidebar_list %}
-<div style="padding:15px; font-size:0.9rem; color:var(--sidebar-text);">
-    Alert History (Last 100)
+<div style="padding:15px;">
+    <h3 style="font-size:0.95rem; margin-bottom:15px; color:var(--text-primary);">Alert Configuration</h3>
+
+    <div style="margin-bottom:20px;">
+        <label style="font-size:0.85rem; color:#8b949e; display:block; margin-bottom:5px;">CPU Limit (%)</label>
+        <input type="number" id="cpu-limit" min="1" max="100"
+            style="width:100%; padding:6px; border:1px solid var(--border); border-radius:4px; background:var(--input-bg); color:var(--text-primary);">
+    </div>
+
+    <div style="margin-bottom:20px;">
+        <label style="font-size:0.85rem; color:#8b949e; display:block; margin-bottom:5px;">Memory Limit (%)</label>
+        <input type="number" id="mem-limit" min="1" max="100"
+            style="width:100%; padding:6px; border:1px solid var(--border); border-radius:4px; background:var(--input-bg); color:var(--text-primary);">
+    </div>
+
+    <button class="btn-sm" onclick="saveConfig()" style="width:100%; margin-bottom:10px;">💾 Save Configuration</button>
+    <button class="btn-sm" onclick="testNotification()"
+        style="width:100%; background:var(--accent); border-color:var(--accent);">🧪 Send Test Message</button>
 </div>
 {% endblock %}
 
 {% block main %}
 <div class="logs-header" style="position:sticky; top:0; z-index:100; background:var(--bg-color);">
-    <strong style="font-size:1.1rem;">Alert History</strong>
-    <div class="controls" style="display:flex; gap:10px; align-items:center;">
-        <label style="font-size:0.85rem; color:#8b949e;">Filter Date:</label>
-        <input type="date" id="alert-date-filter" onchange="filterAlerts()"
-            style="padding:4px; border:1px solid var(--border); border-radius:4px; background:var(--input-bg); color:var(--text-primary);">
-        <button class="btn-sm" onclick="location.reload()">Refresh</button>
-    </div>
+    <strong style="font-size:1.1rem;">Notification Settings</strong>
 </div>
 
 <div class="content-area" style="flex-direction:column; padding:20px; overflow-y:auto;">
-    <table style="width:100%; border-collapse:collapse; color:var(--text-primary); font-size:0.9rem;">
-        <thead>
-            <tr style="border-bottom:1px solid var(--border); text-align:left;">
-                <th style="padding:10px;">Time</th>
-                <th style="padding:10px;">Level</th>
-                <th style="padding:10px;">Container</th>
-                <th style="padding:10px;">Message</th>
-            </tr>
-        </thead>
-        <tbody id="alert-table-body">
-            <tr>
-                <td colspan="4" style="padding:10px; text-align:center; color:#8b949e;">Loading...</td>
-            </tr>
-        </tbody>
-    </table>
+
+    <!-- Slack Configuration -->
+    <div class="config-section" style="margin-bottom:25px; padding:15px; background:var(--card-bg); border-radius:8px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+            <h3 style="margin:0; font-size:1rem;">💬 Slack</h3>
+            <label class="toggle-switch">
+                <input type="checkbox" id="slack-enabled" onchange="toggleWebhook('slack')">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        <input type="url" id="slack-webhook" placeholder="https://hooks.slack.com/services/..."
+            style="width:100%; padding:8px; border:1px solid var(--border); border-radius:4px; background:var(--input-bg); color:var(--text-primary); font-size:0.85rem;">
+    </div>
+
+    <!-- Discord Configuration -->
+    <div class="config-section" style="margin-bottom:25px; padding:15px; background:var(--card-bg); border-radius:8px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+            <h3 style="margin:0; font-size:1rem;">🎮 Discord</h3>
+            <label class="toggle-switch">
+                <input type="checkbox" id="discord-enabled" onchange="toggleWebhook('discord')">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        <input type="url" id="discord-webhook" placeholder="https://discord.com/api/webhooks/..."
+            style="width:100%; padding:8px; border:1px solid var(--border); border-radius:4px; background:var(--input-bg); color:var(--text-primary); font-size:0.85rem;">
+    </div>
+
+    <!-- Telegram Configuration -->
+    <div class="config-section" style="margin-bottom:25px; padding:15px; background:var(--card-bg); border-radius:8px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+            <h3 style="margin:0; font-size:1rem;">✈️ Telegram</h3>
+            <label class="toggle-switch">
+                <input type="checkbox" id="telegram-enabled" onchange="toggleWebhook('telegram')">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        <input type="text" id="telegram-token" placeholder="Bot Token"
+            style="width:100%; padding:8px; margin-bottom:8px; border:1px solid var(--border); border-radius:4px; background:var(--input-bg); color:var(--text-primary); font-size:0.85rem;">
+        <input type="text" id="telegram-chat" placeholder="Chat ID"
+            style="width:100%; padding:8px; border:1px solid var(--border); border-radius:4px; background:var(--input-bg); color:var(--text-primary); font-size:0.85rem;">
+    </div>
+
+    <!-- Generic Webhook Configuration -->
+    <div class="config-section" style="margin-bottom:25px; padding:15px; background:var(--card-bg); border-radius:8px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+            <h3 style="margin:0; font-size:1rem;">🔗 Generic Webhook</h3>
+            <label class="toggle-switch">
+                <input type="checkbox" id="generic-enabled" onchange="toggleWebhook('generic')">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        <input type="url" id="generic-webhook" placeholder="https://your-webhook-url.com/endpoint"
+            style="width:100%; padding:8px; border:1px solid var(--border); border-radius:4px; background:var(--input-bg); color:var(--text-primary); font-size:0.85rem;">
+    </div>
+
+    <!-- Alert History -->
+    <div style="margin-top:30px;">
+        <h3 style="font-size:1rem; margin-bottom:15px;">📜 Recent Alerts</h3>
+        <div style="max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:6px;">
+            <table style="width:100%; border-collapse:collapse; color:var(--text-primary); font-size:0.85rem;">
+                <thead style="position:sticky; top:0; background:var(--card-bg);">
+                    <tr style="border-bottom:1px solid var(--border); text-align:left;">
+                        <th style="padding:10px;">Time</th>
+                        <th style="padding:10px;">Level</th>
+                        <th style="padding:10px;">Container</th>
+                        <th style="padding:10px;">Message</th>
+                    </tr>
+                </thead>
+                <tbody id="alert-table-body">
+                    <tr>
+                        <td colspan="4" style="padding:10px; text-align:center; color:#8b949e;">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
+
+<style>
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 24px;
+    }
+
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #444;
+        transition: 0.3s;
+        border-radius: 24px;
+    }
+
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+    }
+
+    input:checked+.toggle-slider {
+        background-color: var(--accent);
+    }
+
+    input:checked+.toggle-slider:before {
+        transform: translateX(26px);
+    }
+</style>
 {% endblock %}
 
 {% block scripts %}

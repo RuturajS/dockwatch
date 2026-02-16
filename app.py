@@ -79,6 +79,60 @@ def init_db():
             except sqlite3.OperationalError as e:
                 print(f"Column {col_name} migration error: {e}")
 
+    # Load webhook values from environment variables if they exist
+    # This ensures .env values are populated on first run
+    slack_webhook = os.environ.get('SLACK_WEBHOOK_URL', '')
+    discord_webhook = os.environ.get('DISCORD_WEBHOOK_URL', '')
+    telegram_token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+    telegram_chat = os.environ.get('TELEGRAM_CHAT_ID', '')
+    generic_webhook = os.environ.get('GENERIC_WEBHOOK_URL', '')
+    
+    # Check if config already has values, if not, populate from env
+    c.execute("SELECT slack_webhook, discord_webhook, telegram_bot_token, telegram_chat_id, generic_webhook FROM alerts_config WHERE id=1")
+    current_config = c.fetchone()
+    
+    if current_config:
+        # Update only if database values are empty but env has values
+        db_slack, db_discord, db_tg_token, db_tg_chat, db_generic = current_config
+        
+        updates = []
+        params = []
+        
+        if not db_slack and slack_webhook:
+            updates.append("slack_webhook=?")
+            params.append(slack_webhook)
+            updates.append("slack_enabled=?")
+            params.append(1 if slack_webhook else 0)
+            
+        if not db_discord and discord_webhook:
+            updates.append("discord_webhook=?")
+            params.append(discord_webhook)
+            updates.append("discord_enabled=?")
+            params.append(1 if discord_webhook else 0)
+            
+        if not db_tg_token and telegram_token:
+            updates.append("telegram_bot_token=?")
+            params.append(telegram_token)
+            
+        if not db_tg_chat and telegram_chat:
+            updates.append("telegram_chat_id=?")
+            params.append(telegram_chat)
+            
+        if telegram_token and telegram_chat and (not db_tg_token or not db_tg_chat):
+            updates.append("telegram_enabled=?")
+            params.append(1)
+            
+        if not db_generic and generic_webhook:
+            updates.append("generic_webhook=?")
+            params.append(generic_webhook)
+            updates.append("generic_enabled=?")
+            params.append(1 if generic_webhook else 0)
+        
+        if updates:
+            query = f"UPDATE alerts_config SET {', '.join(updates)} WHERE id=1"
+            c.execute(query, params)
+            print("Loaded webhook configurations from environment variables")
+
     # Alert History
     c.execute('''CREATE TABLE IF NOT EXISTS alert_history
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -824,6 +878,20 @@ def alerts_history_api():
     for r in rows:
         history.append({'id': r[0], 'timestamp': r[1], 'level': r[2], 'message': r[3], 'container': r[4]})
     return jsonify(history)
+
+@app.route('/api/alerts/test', methods=['POST'])
+@login_required
+def test_notification():
+    """Send a test notification to verify webhook configuration"""
+    try:
+        send_notification(
+            "🧪 DockWatch Test Notification",
+            "This is a test message from DockWatch. If you're seeing this, your notification configuration is working correctly!"
+        )
+        log_alert("Info", "Test notification sent", "System")
+        return jsonify({'status': 'success', 'message': 'Test notification sent successfully'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # --- Monitoring Logic ---
 last_alert_cooldown = {}
