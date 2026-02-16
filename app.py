@@ -575,24 +575,50 @@ def image_history(image_id):
 @login_required
 def scan_image(image_id):
     try:
+        # First check if Trivy is installed
+        try:
+            trivy_check = subprocess.run(["trivy", "--version"], capture_output=True, text=True, timeout=5)
+            if trivy_check.returncode != 0:
+                return jsonify({
+                    'error': 'Trivy is not installed or not accessible',
+                    'message': 'Please install Trivy to use vulnerability scanning: https://aquasecurity.github.io/trivy/'
+                }), 400
+        except FileNotFoundError:
+            return jsonify({
+                'error': 'Trivy is not installed',
+                'message': 'Please install Trivy to use vulnerability scanning: https://aquasecurity.github.io/trivy/',
+                'install_command': 'See https://aquasecurity.github.io/trivy/latest/getting-started/installation/'
+            }), 400
+        except subprocess.TimeoutExpired:
+            return jsonify({'error': 'Trivy check timed out'}), 500
+        
         image = client.images.get(image_id)
         # Use repo tag if available, else ID
         target = image.tags[0] if image.tags else image.id
         
-        # Trivy command
+        # Trivy command with timeout
         cmd = ["trivy", "image", "--format", "json", "--scanners", "vuln", target]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)  # 5 min timeout
         
         if result.returncode != 0:
              # Trivy might fail if DB not found or other issues
-             # We try to return stderr
              err = result.stderr or "Unknown error"
-             return jsonify({'error': err, 'stdout': result.stdout})
+             return jsonify({
+                 'error': 'Trivy scan failed',
+                 'details': err,
+                 'stdout': result.stdout
+             }), 500
              
         # Return raw JSON from trivy
         return Response(result.stdout, mimetype='application/json')
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'Scan timed out. Image might be too large or Trivy is taking too long.'}), 500
+    except docker.errors.ImageNotFound:
+        return jsonify({'error': f'Image {image_id} not found'}), 404
+    except docker.errors.APIError as e:
+        return jsonify({'error': f'Docker API error: {str(e)}'}), 500
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
 @app.route('/api/images/pull', methods=['POST'])
 @login_required
@@ -617,10 +643,41 @@ def pull_image():
 def delete_image(image_id):
     try:
         force = request.args.get('force', 'false') == 'true'
+        
+        # Try to get image info first
+        try:
+            image = client.images.get(image_id)
+            image_tags = image.tags if image.tags else ['<none>:<none>']
+        except docker.errors.ImageNotFound:
+            return jsonify({'error': f'Image {image_id} not found'}), 404
+        
+        # Attempt deletion
         client.images.remove(image_id, force=force)
-        return jsonify({'status': 'deleted'})
+        return jsonify({
+            'status': 'deleted',
+            'image': image_tags[0]
+        })
+    except docker.errors.APIError as e:
+        error_msg = str(e)
+        # Check for common error patterns
+        if 'is being used by' in error_msg or 'conflict' in error_msg.lower():
+            return jsonify({
+                'error': 'Image is currently in use by one or more containers',
+                'details': 'Please stop and remove containers using this image first, or use force delete',
+                'technical_details': error_msg
+            }), 409
+        elif 'no such image' in error_msg.lower():
+            return jsonify({'error': f'Image {image_id} not found'}), 404
+        else:
+            return jsonify({
+                'error': 'Failed to delete image',
+                'details': error_msg
+            }), 500
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'error': 'Unexpected error while deleting image',
+            'details': str(e)
+        }), 500
 
 @app.route('/api/images/prune', methods=['POST'])
 @login_required
