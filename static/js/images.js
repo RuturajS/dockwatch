@@ -48,8 +48,6 @@ function selectImage(img, el) {
         .then(data => {
             document.getElementById('history-view').textContent = JSON.stringify(data, null, 2);
         });
-
-    document.getElementById('scan-view').textContent = "No scan run.";
 }
 
 function pullImage() {
@@ -93,95 +91,4 @@ function pullImage() {
     });
 }
 
-function scanImage() {
-    if (!currentImage) {
-        showToast('Please select an image first', 'error');
-        return;
-    }
 
-    document.getElementById('scan-view').textContent = "Scanning... (this may take a while)";
-
-    fetch(`/api/images/scan/${currentImage.long_id}`)
-        .then(r => {
-            if (!r.ok) {
-                return r.json().then(err => {
-                    throw err;
-                });
-            }
-            return r.json();
-        })
-        .then(data => {
-            document.getElementById('scan-view').textContent = JSON.stringify(data, null, 2);
-            showToast('Scan Complete', 'success');
-        })
-        .catch(err => {
-            let errorMsg = 'Scan Failed';
-            let errorDetails = '';
-
-            if (err.error) {
-                errorMsg = err.error;
-                if (err.message) {
-                    errorDetails = `\n\n${err.message}`;
-                }
-                if (err.install_command) {
-                    errorDetails += `\n\n${err.install_command}`;
-                }
-                if (err.details) {
-                    errorDetails += `\n\nDetails: ${err.details}`;
-                }
-            } else if (err.message) {
-                errorMsg = err.message;
-            }
-
-            document.getElementById('scan-view').textContent = `Error: ${errorMsg}${errorDetails}`;
-            showToast(errorMsg, 'error');
-        });
-}
-
-function deleteImage() {
-    if (!currentImage) {
-        showToast('Please select an image first', 'error');
-        return;
-    }
-
-    if (!confirm(`Delete image ${currentImage.tags[0]}?\n\nThis action cannot be undone.`)) {
-        return;
-    }
-
-    fetch(`/api/images/${currentImage.long_id}?force=true`, { method: 'DELETE' })
-        .then(r => {
-            if (!r.ok) {
-                return r.json().then(err => {
-                    throw err;
-                });
-            }
-            return r.json();
-        })
-        .then(data => {
-            if (data.error) {
-                showToast(data.error, 'error');
-            } else {
-                showToast(`Image Deleted: ${data.image || currentImage.tags[0]}`, 'success');
-                setTimeout(() => location.reload(), 1000);
-            }
-        })
-        .catch(err => {
-            let errorMsg = 'Failed to delete image';
-            let errorDetails = '';
-
-            if (err.error) {
-                errorMsg = err.error;
-                if (err.details) {
-                    errorDetails = `\n\n${err.details}`;
-                }
-                if (err.technical_details) {
-                    console.error('Technical details:', err.technical_details);
-                }
-            } else if (err.message) {
-                errorMsg = err.message;
-            }
-
-            // Show detailed error in toast
-            showToast(errorMsg + errorDetails, 'error');
-        });
-}
